@@ -7,9 +7,9 @@ class Car{
 public:
     Car() = default;
     Car(float x, float y, float vx, float vy, const std::string& filePath):xPos(x),yPos(y),xVel(vx), yVel(vy){
-        sprRedCar = std::make_unique<olc::Sprite>(filePath);
+        sprCar = std::make_unique<olc::Sprite>(filePath);
     }
-    virtual void updateCar(float time) {
+    void updateCar(float time) {
        yPos = yPos - yVel * time;
        xPos = xPos + xVel * time;
     }
@@ -21,17 +21,15 @@ public:
     float getY() const{
         return yPos;
     }
-    [[nodiscard]]
-    auto getPtr(){
-        return sprRedCar.get();
+    olc::Sprite* getPtr(){
+        return sprCar.get();
     }
 private:
     float xPos;
     float yPos;
     float xVel;
     float yVel;
-    std::unique_ptr<olc::Sprite> sprRedCar;
-
+    std::unique_ptr<olc::Sprite> sprCar;
 };
 
 class RoadSim : public olc::PixelGameEngine {
@@ -45,12 +43,11 @@ public:
         sprVertical = std::make_unique<olc::Sprite>("../sprites/vertical_road.png");
         sprJunction = std::make_unique<olc::Sprite>("../sprites/junction.png");
 
-        // Create Car..
-        // Todo: May be add these to a vector
-        BottomUp = Car((float)13 * 15, (float) 9 * 32, 0,15, "../sprites/car-red.png");
-        LeftRight = Car((float)0, (float) 4 * 33, 13,0, "../sprites/car-red-left.png");
-        TopBottom = Car((float)7 * 30, (float) 0 , 0,-15, "../sprites/car-silver-top-bottom.png");
-        RightLeft = Car((float)13 * 32, (float) 4 * 37, -15,0, "../sprites/car-yellow-right-left.png");
+        myCar.emplace_back((float)13 * 15, (float) 9 * 32, 0,15, "../sprites/car-red.png");
+        myCar.emplace_back((float)0, (float) 4 * 33, 13,0, "../sprites/car-red-left.png");
+        // negative velocity represents movement in opposite direction..
+        myCar.emplace_back((float)7 * 30, (float) 0 , 0,-15, "../sprites/car-silver-top-bottom.png");
+        myCar.emplace_back((float)13 * 32, (float) 4 * 37, -15,0, "../sprites/car-yellow-right-left.png");
 
         m_StartTime = std::chrono::steady_clock::now();
         return true;
@@ -58,32 +55,28 @@ public:
     bool OnUserUpdate(float fElapsedTime) override{
         Clear(olc::BLACK);
         drawRoad();
-        DrawSprite(olc::vi2d((int)BottomUp.getX(), (int)BottomUp.getY()), BottomUp.getPtr());
-        DrawSprite(olc::vi2d( (int)LeftRight.getX(), (int)LeftRight.getY()), LeftRight.getPtr());
-        DrawSprite(olc::vi2d((int)TopBottom.getX(), (int)TopBottom.getY()), TopBottom.getPtr());
-        DrawSprite(olc::vi2d((int)RightLeft.getX(), (int)RightLeft.getY()), RightLeft.getPtr());
 
+        for(auto& elt: myCar){
+            DrawSprite(olc::vi2d((int)elt.getX(), (int)elt.getY()), elt.getPtr());
+        }
 
         // Update Car Position..
-        BottomUp.updateCar(fElapsedTime);
-        LeftRight.updateCar(fElapsedTime);
-        TopBottom.updateCar(fElapsedTime);
-        RightLeft.updateCar(fElapsedTime);
-
+        for(auto& elt: myCar){
+            elt.updateCar(fElapsedTime);
+        }
 
         int curr_dur = (int)elapsedSeconds();
 
+        // display time..
         DrawString(0,0,"Timer:" + std::to_string(curr_dur));
 
         return true;
     }
     void drawRoad(){
-
         // draw horizontal portion of the road
         for(int i = 0 ; i < 6 ; i++){
             DrawSprite(olc::vi2d((int)  i * 32, (int)  4 * 32), sprHorizontal.get());
         }
-
         // draw a junction
         DrawSprite(olc::vi2d((int)  6 * 32, (int)  4 * 32), sprJunction.get());
         // draw a vertical road portion
@@ -92,7 +85,6 @@ public:
             if (i == 4) continue;
             DrawSprite(olc::vi2d((int)  6 * 32, (int)  i * 32), sprVertical.get());
         }
-
         //draw horizontal portion of the road
         for(int i = 7 ; i < 14 ; i++){
             DrawSprite(olc::vi2d((int)  i * 32, (int)  4 * 32), sprHorizontal.get());
@@ -104,11 +96,7 @@ private:
     std::unique_ptr<olc::Sprite> sprVertical;
     std::unique_ptr<olc::Sprite> sprJunction;
 
-
-    Car BottomUp;
-    Car LeftRight;
-    Car TopBottom;
-    Car RightLeft;
+    std::vector<Car> myCar;
 
     std::chrono::time_point<std::chrono::steady_clock> m_StartTime;
 
