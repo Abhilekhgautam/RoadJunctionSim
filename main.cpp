@@ -1,7 +1,6 @@
 #define OLC_PGE_APPLICATION
 #include "olcPixelGameEngine.h"
-#define OLC_SOUNDWAVE
-#include "olcSoundWaveEngine.h"
+
 #include <chrono>
 #include <algorithm>
 
@@ -36,6 +35,7 @@ public:
         return sprCar.get();
     }
 
+    // overload
     bool operator != (const Car& car) const{
         if (this->getX() == car.getX() && this->getY() == car.getY() && this->getXVel() == car.getYVel()) return false;
         else return true;
@@ -94,10 +94,6 @@ public:
         sprJunction = std::make_unique<olc::Sprite>("../sprites/junction.png");
         sprPond = std::make_unique<olc::Sprite>("../sprites/pond.png");
 
-        bgmEngine.InitialiseAudio();
-        // background music
-        bgm = std::make_unique<olc::sound::Wave>("../music/carmoving.wav");
-
         vCar.emplace_back((float)13 * 15, (float) 9 * 32, 0,15, "../sprites/car-red-bottom-top.png");
         vCar.emplace_back((float)0, (float) 4 * 33, 13,0, "../sprites/car-red-left-right.png");
         // negative velocity represents movement in opposite direction..
@@ -107,8 +103,6 @@ public:
         m_StartTime = std::chrono::steady_clock::now();
         moveX = false;
         moveY = true;
-
-        bgmEngine.PlayWaveform(bgm.get(), true);
 
         return true;
     }
@@ -124,9 +118,9 @@ public:
         }
 
         //Draw pond
-        DrawSprite(olc::vi2d((int)300, 200), sprPond.get());
-        DrawSprite(olc::vi2d((int)10, 160), sprPond.get());
-        DrawSprite(olc::vi2d((int)10, 60), sprPond.get());
+        DrawSprite(olc::vi2d(300, 200), sprPond.get());
+        DrawSprite(olc::vi2d(10, 160), sprPond.get());
+        DrawSprite(olc::vi2d(10, 60), sprPond.get());
 
 
         // Draw Strip(for Traffic Light)
@@ -152,17 +146,17 @@ public:
         // display time..
         DrawString(0,0,"Timer:" + std::to_string(curr_dur) + " Sec");
 
+	// produce car every 5 secs
         if(curr_dur % 5 == 0 && curr_dur != last_manufactured) {
                 vCar.emplace_back(myFactory.BottomToTop());
                 if(curr_dur % 10 == 0 )
-                vCar.emplace_back(myFactory.TopToBottom());
+                   vCar.emplace_back(myFactory.TopToBottom());
+
                 vCar.emplace_back(myFactory.LeftToRight());
                 vCar.emplace_back(myFactory.RightToLeft());
-
+            
             last_manufactured = curr_dur;
         }
-
-        bgmEngine.PlayWaveform(bgm.get(), false);
 
         // update traffic light
         if(curr_dur != 0 && curr_dur % 20 == 0 && last_updated !=curr_dur){
@@ -192,7 +186,7 @@ public:
             DrawSprite(olc::vi2d((int)  i * 32, (int)  4 * 32), sprHorizontal.get());
         }
     }
-
+    // return distance to junction relative from the car
     float getJunDist(Car& car) const {
         if(getMoveDirection(car) == 0)
             return (car.getY() - 3.50f * 32.0f);
@@ -206,22 +200,20 @@ public:
         else return (car.getX() - 5 * 32.0f);
     }
 
+    // checks if a car crossed the junction
     bool crossedJun(Car& car){
         if(getMoveDirection(car) == 0) {
             if ((car.getY() - 3.50f * 32.0f) < 0) return false;
             return true;
         }
-            // bottom to top
         else if(getMoveDirection(car) == 2) {
                 if ((car.getY() - 5.0f * 32.0f) > 0) return false;
                 return true;
             }
-            // right to left
         else if(getMoveDirection(car) == 1){
             if((car.getX() - 7 * 32.0f) > 0) return false;
             return true;
         }
-            //left to right
         else {
             if((car.getX() - 6 * 32.0f) < 0) return false;
             return true;
@@ -274,6 +266,7 @@ public:
         else if((dir == 0 || dir == 2) && moveY){
             return false;
         }
+	// probably won't reach here
         else return false;
     }
 
@@ -315,20 +308,12 @@ private:
     std::unique_ptr<olc::Sprite> sprPond;
     std::unique_ptr<olc::Sprite> sprGarden;
 
-    olc::sound::WaveEngine bgmEngine;
-    std::unique_ptr<olc::sound::Wave> bgm;
-
-    bool moveX = true;
-    bool moveY = false;
+    bool moveX;
+    bool moveY;
 
     std::vector<Car> vCar;
     CarFactory myFactory;
 
-    //Coordinates for Road Junction
-    std::vector<int> vTopBottomJun = {6 * 32, 5 * 32, 7 * 32, 5 * 32};
-    std::vector<int> vBottomTopJun = {6 * 32, 4 * 32, 7 * 32, 4 * 32};
-    std::vector<int> vLeftRightJun = {6 * 32, 4 * 32, 6 * 32, 5 * 32};
-    std::vector<int> vRightLeftJun = {7 * 32, 4 * 32, 7 * 32, 5 * 32};
 
     std::chrono::time_point<std::chrono::steady_clock> m_StartTime;
     int last_manufactured = 0;
@@ -348,4 +333,6 @@ int main() {
 
     if(mySimulation.Construct(450, 340, 4,4))
         mySimulation.Start();
+
+    return 0; // happy compiler :)
 }
